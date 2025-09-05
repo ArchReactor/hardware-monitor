@@ -4,7 +4,7 @@ services:
         restart: always
         image: node:22
         user: node
-        command: node index.js
+        command: bash -c "npm install && npm update && npm start"
         environment:
             NODE_ENV: production
             TZ: America/Chicago

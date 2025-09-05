@@ -1,5 +1,8 @@
 {
   "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "bambu-node": "^3.22.21",
     "discord.js": "^14.22.1"
