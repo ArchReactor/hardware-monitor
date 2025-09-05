@@ -1,0 +1,14 @@
+{
+	"token": "discord bot token here",
+	"clientId": "discord client id here",
+	"guildId": "discord server id here",
+	"channelId": "discord channel id here",
+	"printers": {
+		"name": {
+			"name": "Fiendly name",
+			"host": "ip address here",
+			"accessToken": "access token here",
+			"serialNumber": "serial number here"
+		}
+	}
+}
