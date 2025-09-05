@@ -1,0 +1,15 @@
+services:
+    nodejs:
+        container_name: machines-monitor
+        restart: always
+        image: node:22
+        user: node
+        command: node index.js
+        environment:
+            NODE_ENV: production
+            TZ: America/Chicago
+        #ports:
+        #    - "80:3080"
+        volumes:
+            - ./monitor:/home/node/monitor:rw
+        working_dir: /home/node/monitor
