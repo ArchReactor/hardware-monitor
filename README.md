@@ -19,21 +19,21 @@ Currently supports Bambu 3D printers.
 
 Note: this repo contains Docker config, it is optional to use docker.
 
-1. Copy the config.json.template to config.json
-2. Clone the repo
+1. Clone the repo
    ```sh
    git clone https://github.com/ArchReactor/hardware-monitor.git
    ```
-3. If using docker, run ```docker compose up```
-4. If not using Docker, ```cd monitor``` and continue
-5. Install NPM packages
+2. Copy the config.json.template to config.json
+3. Install NPM packages
    ```sh
    npm install
    ```
-6. Enter your discord bit info in `config.json`
+4. Enter your discord bit info in `config.json`
    See the following URL for how to create a bot and get the values neded
    * https://discordjs.guide/preparations/setting-up-a-bot-application.html
-7. Add your Bambu printer information
+5. Add your Bambu printer information
+6. If using docker, run ```docker compose up```
+7. If not using Docker, ```cd monitor``` and continue
 8. Run the service
    ```sh
    npm start

@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
-	.setName('server')
+	.setName('machine-server')
 	.setDescription('Provides information about the server.');
 export async function execute(interaction) {
 	// interaction.guild is the object representing the Guild in which the command was run

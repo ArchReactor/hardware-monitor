@@ -1,7 +1,7 @@
 import { SlashCommandBuilder } from 'discord.js';
 
 export const data = new SlashCommandBuilder()
-	.setName('user')
+	.setName('machine-user')
 	.setDescription('Provides information about the user.');
 export async function execute(interaction) {
 	// interaction.user is the object representing the User who ran the command
