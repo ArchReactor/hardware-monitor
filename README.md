@@ -49,7 +49,7 @@ Note: this repo contains Docker config, it is optional to use docker.
 
 Your discord channel will now how status messages.  Other commands:
 * /printstatus {printer name} - supports autocomplete
-* /ping - replies Pong if the app is working 
+* /machine-ping - replies Pong if the app is working 
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
