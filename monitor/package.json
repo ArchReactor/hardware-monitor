@@ -5,6 +5,7 @@
   },
   "dependencies": {
     "bambu-node": "^3.22.21",
-    "discord.js": "^14.22.1"
+    "discord.js": "^14.22.1",
+    "moonraker-client": "^1.0.2"
   }
 }

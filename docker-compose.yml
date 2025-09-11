@@ -2,7 +2,7 @@ services:
     nodejs:
         container_name: machines-monitor
         restart: always
-        image: node:22
+        image: node:20
         user: node
         command: bash -c "npm install && npm update && npm start"
         environment:

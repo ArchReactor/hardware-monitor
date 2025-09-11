@@ -9,6 +9,7 @@ import { readdirSync } from 'fs';
 import { join } from 'path';
 import { Client, Collection, Events, GatewayIntentBits, MessageFlags } from 'discord.js';
 import hardwareBambu from './hardware/bambu.js';
+import hardwareMoonraker from './hardware/moonraker.js';
 import config from './config.json' with { type: "json" };
 
 // Create a new client instance
@@ -87,9 +88,15 @@ bot.on(Events.InteractionCreate, async interaction => {
 });
 
 Object.entries(config.printers).forEach(([key, printerConfig]) => {
-	const printer = hardwareBambu.create(printerConfig);
-	hardwareBambu.attachEvents(printer, bot, config);
-	printer.bambu.connect();
-	bot.devices.set(printer.name, printer);
+	if('serialNumber' in printerConfig) { //bambu
+		const printer = hardwareBambu.create(printerConfig);
+		hardwareBambu.attachEvents(printer, bot, config);
+		printer.bambu.connect();
+		bot.devices.set(printer.name, printer);
+	} else if('url' in printerConfig) { //moonraker
+		const printer = hardwareMoonraker.create(printerConfig);
+		hardwareMoonraker.attachEvents(printer, bot, config);
+		bot.devices.set(printer.name, printer);
+	}
 });
 

@@ -30,7 +30,9 @@ export async function execute(interaction, devices) {
 		} else {
 			await interaction.reply(printer.statusMessage);
 		}
-	} else {
-		await interaction.reply(`Device ${devicename} is not a Bambu printer.`);
+	} else if('moonraker' in printer) {
+		await interaction.reply(`${printer.name} is ${printer.statusMessage}!`);
+	}else {
+		await interaction.reply(`Device ${devicename} is not a printer.`);
 	}
 }
