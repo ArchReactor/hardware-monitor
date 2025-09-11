@@ -1,4 +1,5 @@
 import { MoonrakerClient } from "moonraker-client";
+import { formatTimeSeconds, updateStatus } from "./helpers.js";
 
 export default {
     create: (printerConfig) => {
@@ -16,25 +17,21 @@ export default {
     attachEvents: (printer, bot, config) => {
         printer.moonraker.subscribeToPrinterObjectStatusWithListener({"display_status": ["progress"], print_stats: ["state", "print_duration"]}, (data) => {
             //standby, printing, paused, complete, error, cancelled
-            const guild = bot.guilds.cache.get(config.guildId);
-            const channel = guild.channels.cache.get(config.channelId); 
             
             if("display_status" in data.objectNotification) {
                 printer.print_progress = data.objectNotification.display_status.progress;
                 setTimeRemaining({printer});
+                updateStatus(printer, bot, config);
             }
             if("print_stats" in data.objectNotification){
                 printer.print_duration = data.objectNotification.print_stats.print_duration;
-                //setTimeRemaining({printer});
-                if(data.objectNotification.print_stats.state === "printing") {
-                    printer.status = "printing";
-                    printer.statusMessage = `${printer.name} has started a new print job! Estimated time: ${printer.remainingTimeFormatted}`;
-                    channel.send(printer.statusMessage);
-                } else if(data.objectNotification.print_stats.state === "complete") {
-                    printer.status = "complete";
-                    printer.statusMessage = `${printer.name} has finished the print job!`;
-                    channel.send(printer.statusMessage);
+                //setTimeRemaining({printer}); don't udpates on runtime change, only percentage
+                var newstatus = normaliseStatusMoonraker(data.objectNotification.display_status.state);
+                if(printer.status !== newstatus) {
+                    printer.status = newstatus;
+                    updateStatus(printer, bot, config);
                 }
+                console.log(`${printer.name} status has changed to ${printer.status}!`, data);
             }
         });
     }
@@ -42,13 +39,8 @@ export default {
 
 function setTimeRemaining({printer}) {
     if(printer.print_duration && printer.print_progress) {
-        const remainingTimeInSeconds = Math.max(0, ((printer.print_duration / printer.print_progress) - printer.print_duration));
-        const hours = Math.floor(remainingTimeInSeconds / 3600);
-        const minutes = Math.floor((remainingTimeInSeconds % 3600) / 60);
-        const seconds = remainingTimeInSeconds % 60;
-
-        printer.remainingTimeInSeconds = remainingTimeInSeconds;
-        printer.remainingTimeFormatted = `${hours}h ${minutes}m ${seconds}s`;
+        printer.remainingTimeInSeconds = Math.max(0, ((printer.print_duration / printer.print_progress) - printer.print_duration));
+        printer.remainingTimeFormatted = formatTimeSeconds(printer.remainingTimeInSeconds);
         console.log(`${printer.name} Remaining time: ${printer.remainingTimeFormatted}`, {
             print_progress: printer.print_progress,
             print_duration: printer.print_duration,
