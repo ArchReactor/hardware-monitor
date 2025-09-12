@@ -70,8 +70,8 @@ export async function updateStatus(printer, bot, config) {
             msg.embeds[0].fields.some(field => field.name === "Status" && field.value !== "Completed" && field.value !== "Error") //only grab if last status isn't completed
         ).first();
     }
-    //then add or update embed
-    if(!printer.embed) {
+    //then add or update embed, if currently completed make a new one
+    if(!printer.embed || (printer.embed.embeds[0].fields.some(field => field.name === "Status" && (field.value === "Completed" || field.value === "Error")))) {
         if(printer.status === "printing") { //don't create unless printing
             printer.embed = await channel.send({embeds: [{ 
                 title: `Printer Status ${printer.name}`, 
