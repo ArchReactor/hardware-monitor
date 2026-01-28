@@ -15,51 +15,18 @@ export function formatTimeMinutes(minutes) {
     return `${hrs}h ${mins}m`;
 }
 
-export function normaliseStatusBambu(status) {
-    switch (status) {
-        case "OFFLINE":
-            return "Offline";
-        case "FINISH":
-            return "Completed";
-        case "FAILED":
-            return "Error";
-        case "RUNNING":
-            return "Printing";
-        case "IDLE":
-            return "Idle";
-        case "PAUSE":
-            return "Paused";
-        case "PREPARE":
-            return "Preparing";
-        case "SLICING":
-            return "Slicing";
-        default:
-            return status;
-    }
-}
-
-export function normaliseStatusMoonraker(status) {
-    switch (status) {
-        case "standby":
-            return "Idle";
-        case "printing":
-            return "Printing";
-        case "paused":
-            return "Paused";
-        case "complete":
-            return "Completed";
-        case "error":
-            return "Error";
-        case "cancelled":
-            return "Cancelled";
-        default:
-            return status;
-    }
-}
-
-export async function updateStatus(printer, bot, config) {
-    const guild = bot.guilds.cache.get(config.guildId);
-    const channel = guild.channels.cache.get(config.channelId); 
+export async function updateStatus(printer, bot) {
+    if(bot.globalConfig.disableDiscord) {
+        console.log(`[INFO] Discord updates are disabled in config.json`, JSON.stringify({
+            name: printer.name,
+            status: printer.status,
+            remainingTimeFormatted: printer.remainingTimeFormatted,
+			accessToken: printer.bambu?.config?.accessToken || null,
+        }));
+        return;
+    }; //log only if disabled
+    const guild = bot.guilds.cache.get(bot.globalConfig.guildId);
+    const channel = guild.channels.cache.get(bot.globalConfig.channelId); 
     //first check for past embeds
     if(!printer.embed) {
         const messages = await channel.messages.fetch({ limit: 100 });

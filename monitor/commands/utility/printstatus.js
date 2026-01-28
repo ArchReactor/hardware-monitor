@@ -24,15 +24,13 @@ export async function execute(interaction, devices) {
 	const printer = devices.get(devicename);
 	if (!printer) {
 		await interaction.reply(`Device ${devicename} not found.`);
-	} else if('bambu' in printer) {
+	} else if('bambu' in printer || 'moonraker' in printer) {
 		if(printer.status === "RUNNING") {
 			await interaction.reply(`${printer.name} is ${printer.status}! Estimated time: ${printer.remainingTimeFormatted}`);
 		} else {
-			await interaction.reply(printer.statusMessage);
+			await interaction.reply(`${printer.name} is ${printer.status}`);
 		}
-	} else if('moonraker' in printer) {
-		await interaction.reply(`${printer.name} is ${printer.statusMessage}!`);
-	}else {
+	} else {
 		await interaction.reply(`Device ${devicename} is not a printer.`);
 	}
 }

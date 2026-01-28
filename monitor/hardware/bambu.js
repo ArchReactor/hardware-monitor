@@ -1,54 +1,115 @@
-import { BambuClient } from "bambu-node";
-import { formatTimeMinutes, normaliseStatusBambu, updateStatus } from "./helpers.js";
+import { Printer } from "./printerBase.js";
+import { PrinterController, P1SCommands } from 'bambu-js';
+import { formatTimeMinutes } from "./helpers.js";
 
-export default {
-    create: (printerConfig) => {
-        return {
-            name: printerConfig.name,
-            bambu: new BambuClient({
-                host: printerConfig.host,
-                accessToken: printerConfig.accessToken,
-                serialNumber: printerConfig.serialNumber,
-            }),
-            status: "OFFLINE",
-            remainingTimeInSeconds: 0,
-            remainingTimeFormatted: "N/A",
-        };
-    },
-
-    attachEvents: (printer, bot, config) => {
-        printer.bambu.on("printer:statusUpdate", async (oldStatus, newStatus) => {
-            //"OFFLINE" | "FINISH" | "FAILED" | "RUNNING" | "IDLE" | "PAUSE" | "PREPARE" | "SLICING"
-            
-            printer.status = normaliseStatusBambu(newStatus);
-            console.log(`${printer.name} status has changed from ${oldStatus} to ${newStatus}!`)
-            if(oldStatus === "RUNNING" && (newStatus === "FAILED" || newStatus === "FINISH" || newStatus === "IDLE")) {
-                printer.remainingTimeInSeconds = 0;
-                printer.remainingTimeFormatted = "N/A";
-            }
-            updateStatus(printer, bot, config);
+export class HardwareBambu extends Printer {
+    constructor(printerConfig) {
+        super(printerConfig);
+        this.bambu = PrinterController.create({
+            model: printerConfig.model,
+            host: printerConfig.host,
+            accessCode: printerConfig.accessToken,
+            serial: printerConfig.serialNumber,
         });
 
-        printer.bambu.on("message", (topic, key, data) => {
-            //console.log(`New ${key} message!`, topic, data)
-            if (key === "print") {
-                if(data.mc_remaining_time) {
-                    printer.remainingTimeInMinutes = data.mc_remaining_time;
-                    printer.remainingTimeFormatted = formatTimeMinutes(printer.remainingTimeInMinutes);
-                    console.log(`${printer.name} Remaining time: ${printer.remainingTimeFormatted}`, {
-                        remainingTimeInMinutes: printer.remainingTimeInMinutes,
-                        mc_remaining_time: data.mc_remaining_time
-                    });
-                    updateStatus(printer, bot, config);
+        // Connection events
+        this.bambu.on("connect", () => {
+            console.log("Printer connected");
+            this.connected = true;
+            this.bambu.sendCommand(P1SCommands.pushAllCommand());
+        });
+
+        this.bambu.on("disconnect", () => {
+            console.log("Printer disconnected");
+            this.connected = false;
+        });
+
+        this.bambu.on("end", () => {
+            console.log("Connection ended");
+            this.connected = false;
+        });
+
+        // State updates
+        this.bambu.on("report", (state) => {
+            // Handle printer state updates
+            //all values: https://github.com/Doridian/OpenBambuAPI/blob/main/mqtt.md#pushingpushall
+            //interesting items
+            //state.print.gcode_state "OFFLINE" | "FINISH" | "FAILED" | "RUNNING" | "IDLE" | "PAUSE" | "PREPARE" | "SLICING"
+            //state.print.mc_remaining_time
+            let stateUpdated = false;
+            const oldStatus = this.status;
+            if(state.print && state.print.command && state.print.command === 'push_status'){ 
+                if(state.print.gcode_state){
+                    this.status = normaliseStatus(state.print.gcode_state);
+                    if(this.status !== oldStatus){
+                        stateUpdated = true;
+                        if(oldStatus === "RUNNING" && (this.status === "FAILED" || this.status === "FINISH" || this.status === "IDLE")) {
+                            this.remainingTimeInSeconds = 0;
+                            this.remainingTimeFormatted = "N/A";
+                        }
+                    }
+                }
+                if(state.print.mc_remaining_time){
+                    if(this.remainingTimeInSeconds !== state.print.mc_remaining_time){
+                        stateUpdated = true;
+                        this.remainingTimeInSeconds = state.print.mc_remaining_time;
+                        this.remainingTimeFormatted = formatTimeMinutes(this.remainingTimeInSeconds);
+                        console.log(`Remaining time: ${this.remainingTimeFormatted}`);
+                    }
                 }
             }
+            if(stateUpdated){
+                this.emit("statusUpdate", {
+                    oldStatus: oldStatus,
+                    status: this.status,
+                    remainingTimeInSeconds: this.remainingTimeInSeconds,
+                    remainingTimeFormatted: this.remainingTimeFormatted
+                });
+            }
+            //console.log("Current state:", state);
         });
+
+        // Error handling
+        this.bambu.on("error", (error) => {
+            this.emit("error", error);
+        });
+
+        this.bambu.connect().then(() => {
+            console.log(`Connected to Bambu printer ${this.name}`);
+        }).catch((error) => {
+            console.error(`Failed to connect to Bambu printer ${this.name}:`, error);
+        });
+    }
+
+
+    async updateToken(accessToken) {        
+        this.bambu.accessToken = accessToken;
+        await this.bambu.disconnect();
+        this.bambu.setAccessCode(accessToken);
+        await this.bambu.connect();
     }
 };
 
-// update the speed of the auxiliary fan to 100%
-//await bambo001.executeCommand(new UpdateFanCommand({ fan: Fan.AUXILIARY_FAN, speed: 100 }))
+function normaliseStatus(status) {
+    switch (status) {
+        case "OFFLINE":
+            return "Offline";
+        case "FINISH":
+            return "Completed";
+        case "FAILED":
+            return "Error";
+        case "RUNNING":
+            return "Printing";
+        case "IDLE":
+            return "Idle";
+        case "PAUSE":
+            return "Paused";
+        case "PREPARE":
+            return "Preparing";
+        case "SLICING":
+            return "Slicing";
+        default:
+            return status;
+    }
+}
 
-// we don't want to do anything else => we close the connection
-// (can be kept open indefinitely if needed)
-//await bambo001.disconnect()

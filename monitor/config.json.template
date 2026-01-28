@@ -3,12 +3,18 @@
 	"clientId": "discord client id here",
 	"guildId": "discord server id here",
 	"channelId": "discord channel id here",
+	"disableDiscord": false,
 	"printers": {
 		"name": {
-			"name": "Fiendly name",
+			"name": "Bambu Fiendly name",
+			"model": "P1S",
 			"host": "ip address here",
 			"accessToken": "access token here",
 			"serialNumber": "serial number here"
+		},
+		"othername": {
+			"name": "Moonraker Friendly name",
+			"url": "http://xxx.xxx.xxx.xxx:7125/"
 		}
 	}
 }
