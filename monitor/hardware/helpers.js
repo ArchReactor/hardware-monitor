@@ -8,13 +8,6 @@ export function formatTimeSeconds(seconds) {
     return `${hrs}h ${mins}m ${secs}s`;
 }
 
-export function formatTimeMinutes(minutes) {
-    if (minutes === 0) return "N/A";
-    const hrs = Math.floor(minutes / 60);
-    const mins = Math.floor((minutes % 60));
-    return `${hrs}h ${mins}m`;
-}
-
 export async function updateStatus(printer, bot) {
     if(bot.globalConfig.disableDiscord) {
         console.log(`[INFO] Discord updates are disabled in config.json`, JSON.stringify({

@@ -1,6 +1,6 @@
 import { Printer } from "./printerBase.js";
 import { PrinterController, P1SCommands } from 'bambu-js';
-import { formatTimeMinutes } from "./helpers.js";
+import { formatTimeSeconds } from "./helpers.js";
 
 export class HardwareBambu extends Printer {
     constructor(printerConfig) {
@@ -55,8 +55,8 @@ export class HardwareBambu extends Printer {
                 if(state.print.mc_remaining_time){
                     if(this.remainingTimeInSeconds !== state.print.mc_remaining_time){
                         stateUpdated = true;
-                        this.remainingTimeInSeconds = state.print.mc_remaining_time;
-                        this.remainingTimeFormatted = formatTimeMinutes(this.remainingTimeInSeconds);
+                        this.remainingTimeInSeconds = state.print.mc_remaining_time * 60; //minutes to seconds
+                        this.remainingTimeFormatted = formatTimeSeconds(this.remainingTimeInSeconds);
                         console.log(`Remaining time: ${this.remainingTimeFormatted}`);
                     }
                 }
