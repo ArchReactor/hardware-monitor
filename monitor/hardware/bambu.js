@@ -10,6 +10,7 @@ export class HardwareBambu extends Printer {
             host: printerConfig.host,
             accessCode: printerConfig.accessToken,
             serial: printerConfig.serialNumber,
+            options: { autoReconnect: true },
         });
 
         // Connection events
@@ -43,7 +44,7 @@ export class HardwareBambu extends Printer {
                     this.status = normaliseStatus(state.print.gcode_state);
                     if(this.status !== oldStatus){
                         stateUpdated = true;
-                        if(oldStatus === "RUNNING" && (this.status === "FAILED" || this.status === "FINISH" || this.status === "IDLE")) {
+                        if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
                             this.remainingTimeInSeconds = 0;
                             this.remainingTimeFormatted = "N/A";
                         }
