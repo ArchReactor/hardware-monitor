@@ -22,6 +22,7 @@
             const div = document.createElement("div");
             div.innerHTML = `<h2>${printer.name}</h2>
                              <p>Status: ${printer.status}</p>
+                             <p>Progress: ${printer.print_progress}%</p>
                              <p>Time Remaining: ${printer.remainingTimeFormatted}</p>`;
             if (printer.accessToken) {
                 div.innerHTML += `

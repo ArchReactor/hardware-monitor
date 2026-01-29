@@ -10,7 +10,7 @@ export class HardwareBambu extends Printer {
             host: printerConfig.host,
             accessCode: printerConfig.accessToken,
             serial: printerConfig.serialNumber,
-            options: { autoReconnect: true },
+            options: { autoReconnect: true, reconnectDelay: 30000  },
         });
 
         // Connection events
@@ -37,6 +37,7 @@ export class HardwareBambu extends Printer {
             //interesting items
             //state.print.gcode_state "OFFLINE" | "FINISH" | "FAILED" | "RUNNING" | "IDLE" | "PAUSE" | "PREPARE" | "SLICING"
             //state.print.mc_remaining_time
+            //state.print.mc_percent
             let stateUpdated = false;
             const oldStatus = this.status;
             if(state.print && state.print.command && state.print.command === 'push_status'){ 
@@ -47,6 +48,7 @@ export class HardwareBambu extends Printer {
                         if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
                             this.remainingTimeInSeconds = 0;
                             this.remainingTimeFormatted = "N/A";
+                            this.print_progress = 100;
                         }
                     }
                 }
@@ -56,6 +58,12 @@ export class HardwareBambu extends Printer {
                         this.remainingTimeInSeconds = state.print.mc_remaining_time;
                         this.remainingTimeFormatted = formatTimeMinutes(this.remainingTimeInSeconds);
                         console.log(`Remaining time: ${this.remainingTimeFormatted}`);
+                    }
+                }
+                if(state.print.mc_percent){
+                    if(this.print_progress !== state.print.mc_percent){
+                        stateUpdated = true;
+                        this.print_progress = state.print.mc_percent;
                     }
                 }
             }
@@ -84,7 +92,6 @@ export class HardwareBambu extends Printer {
 
 
     async updateToken(accessToken) {        
-        this.bambu.accessToken = accessToken;
         await this.bambu.disconnect();
         this.bambu.setAccessCode(accessToken);
         await this.bambu.connect();

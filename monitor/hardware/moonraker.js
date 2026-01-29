@@ -29,6 +29,11 @@ export class HardwareMoonraker extends Printer {
                 if(this.status !== newstatus) {
                     stateUpdated = true;
                     this.status = newstatus;
+                    if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
+                        this.remainingTimeInSeconds = 0;
+                        this.remainingTimeFormatted = "N/A";
+                        this.print_progress = 100;
+                    }
                 }
                 //console.log(`${this.name} status has changed to ${this.status}!`, data);
             }

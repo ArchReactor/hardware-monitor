@@ -1,8 +1,11 @@
 process.on('uncaughtException', (err) => {
-  console.error('Caught uncaught exception, continuing:', err);
-  // Perform cleanup operations if necessary
-  // Log the error for later analysis
-  //process.exit(1); // Exit with a non-zero code to indicate an error
+	if(err.message.includes("connack timeout") && err.stack.includes("mqtt")) {
+		return; //ignore mqtt connection timeouts, for some reason they don't get swollowed in the try catch
+	}
+	console.error('Caught uncaught exception, continuing:', err);
+	// Perform cleanup operations if necessary
+	// Log the error for later analysis
+	//process.exit(1); // Exit with a non-zero code to indicate an error
 });
 
 import express from 'express';
@@ -33,6 +36,7 @@ app.get('/status', (req, res) => {
             name: device.name,
             status: device.status,
             remainingTimeFormatted: device.remainingTimeFormatted,
+			print_progress: device.print_progress,
 			accessToken: device.bambu?.getAccessCode() || "",
         };
     });
@@ -143,7 +147,11 @@ Object.entries(config.printers).forEach(([key, printerConfig]) => {
 			updateStatus(printer, bot);
 		});
 		printer.on("error", (error) => {
-			console.error(`Printer ${printer.name} error:`, error);
+			if(error.message.includes("EHOSTUNREACH")) {
+				console.warn(`Printer ${printer.name} is unreachable. Retrying in 30s`);
+			} else {
+				console.error(`Printer ${printer.name} error:`, error);
+			}
 		});
 		bot.devices.set(printer.name, printer);
 	} else if('url' in printerConfig) { //moonraker

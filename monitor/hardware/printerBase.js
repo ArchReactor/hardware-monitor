@@ -6,6 +6,7 @@ export class Printer extends EventEmitter {
         this.name = printerConfig.name;
         this.status = "OFFLINE";
         this.connected = false;
+        this.print_progress = 100;
         this.remainingTimeInSeconds = 0;
         this.remainingTimeFormatted = "N/A";
         this.printerConfig = printerConfig;
