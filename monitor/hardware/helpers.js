@@ -14,7 +14,7 @@ export async function updateStatus(printer, bot) {
             name: printer.name,
             status: printer.status,
             remainingTimeFormatted: printer.remainingTimeFormatted,
-			accessToken: printer.bambu?.getAccessCode() || null,
+			finishedAt: printer.finishedAt,
         }));
         return;
     }; //log only if disabled
@@ -37,7 +37,7 @@ export async function updateStatus(printer, bot) {
                 title: `Printer Status ${printer.name}`, 
                 description: 'Active print task',
                 fields: [
-                    { name: 'Status', value: `${printer.status} (${printer.print_progress}%)`, inline: true },
+                    { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
                     { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },
                 ]
             }]}); 
@@ -45,11 +45,11 @@ export async function updateStatus(printer, bot) {
     } else {
         const newEmb = EmbedBuilder.from(printer.embed.embeds[0]);
         newEmb.setFields([
-            { name: 'Status', value: `${printer.status} (${printer.print_progress}%)`, inline: true },
+            { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
             { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },
         ]);
         if(printer.status === "Completed" || printer.status === "Error") {
-            newEmb.setDescription('Print task finished at ' + new Date().toLocaleString());
+            newEmb.setDescription('Print task finished at ' + printer.finishedAt);
         }
         printer.embed.edit({ embeds: [newEmb]});
     }

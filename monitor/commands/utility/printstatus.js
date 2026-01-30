@@ -26,7 +26,7 @@ export async function execute(interaction, devices) {
 		await interaction.reply(`Device ${devicename} not found.`);
 	} else if('bambu' in printer || 'moonraker' in printer) {
 		if(printer.status === "Printing") {
-			await interaction.reply(`${printer.name} is ${printer.status}! Progress: ${printer.print_progress}% Estimated time: ${printer.remainingTimeFormatted}`);
+			await interaction.reply(`${printer.name} is ${printer.status}! Progress: ${printer.printProgress}% Estimated time: ${printer.remainingTimeFormatted}`);
 		} else {
 			await interaction.reply(`${printer.name} is ${printer.status}`);
 		}

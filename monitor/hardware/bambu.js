@@ -48,7 +48,10 @@ export class HardwareBambu extends Printer {
                         if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
                             this.remainingTimeInSeconds = 0;
                             this.remainingTimeFormatted = "N/A";
-                            this.print_progress = 100;
+                            this.printProgress = 100;
+                            this.finishedAt = new Date().toLocaleString();
+                        } else {
+                            this.finishedAt = "";
                         }
                     }
                 }
@@ -61,9 +64,9 @@ export class HardwareBambu extends Printer {
                     }
                 }
                 if(state.print.mc_percent){
-                    if(this.print_progress !== state.print.mc_percent){
+                    if(this.printProgress !== state.print.mc_percent){
                         stateUpdated = true;
-                        this.print_progress = state.print.mc_percent;
+                        this.printProgress = state.print.mc_percent;
                     }
                 }
             }

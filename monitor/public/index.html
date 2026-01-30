@@ -1,5 +1,6 @@
-<html>
+<html lang="en-US" style="font-size: 100%; --saturation-factor: 1; dynamic-range-limit: no-limit; --custom-zoom: 100; --devtools-sidebar-width: 0px;" class="platform-web theme-dark theme-darker images-dark density-default font-size-16 has-webkit-scrollbar full-motion visual-refresh mana-toggle-inputs" data-rh="lang,style,class">
 
+<link rel="stylesheet" href="discord.css" />
 <style>
     body {
         background-color: #101218;
@@ -12,27 +13,40 @@
 
 </style>
 <script>
+    function ChildInnerText(parent, childId, text) {
+        parent.getElementsByClassName(childId)[0].innerText = text;
+    }
+    function ChildInnerHTML(parent, childId, html) {
+        parent.getElementsByClassName(childId)[0].innerHTML = html;
+    }
+    function ChildInnerTextGet(parent, childId) {
+        return parent.getElementsByClassName(childId)[0].innerText;
+    }
+
     document.addEventListener("DOMContentLoaded", async function () {
+        const src = document.getElementById("printer_template");
+        templ = src.cloneNode(true);
+        document.body.removeChild(src);
+        templ.id = "";
+        
         const response = await fetch("/status");
         const data = await response.json();
         const main = document.querySelector("main");
 
         for (const printerName in data.printers) {
             const printer = data.printers[printerName];
-            const div = document.createElement("div");
-            div.innerHTML = `<h2>${printer.name}</h2>
-                             <p>Status: ${printer.status}</p>
-                             <p>Progress: ${printer.print_progress}%</p>
-                             <p>Time Remaining: ${printer.remainingTimeFormatted}</p>`;
+            const div = templ.cloneNode(true);
+            ChildInnerText(div, "title", `Printer Status: ${printer.name}`);
+            ChildInnerText(div, "description", printer.status === "Completed" || printer.status === "Error" ? `Print task finished at ${printer.finishedAt}` : printer.status);
+            ChildInnerText(div, "status", `${printer.status}${printer.status === "Printing" ? ` (${printer.printProgress}%)` : ""}`);
+            ChildInnerText(div, "esttime", printer.remainingTimeFormatted);
             if (printer.accessToken) {
-                div.innerHTML += `
-                             <p>
-                                Access Token: <input type="text" value="${printer.accessToken}" style="width: 300px;" />
-                                <button onclick="UpdateAccessToken('${printer.name}', this.previousElementSibling.value)">Update</button>
-                             </p>`;
+                ChildInnerHTML(div, "accesscode", `
+                    <p style="white-space: nowrap;">
+                        Access Token: <input type="text" value="${printer.accessToken}" style="width: 100px;" />
+                        <button onclick="UpdateAccessToken('${printer.name}', this.previousElementSibling.value)">Update</button>
+                    </p>`);
             }
-            div.innerHTML += `
-                             <hr />`;
             main.appendChild(div);
         }
     });
@@ -57,13 +71,48 @@
     }
 </script>
 
-<body>
+<body style="--custom-app-panels-height: 58px; --custom-guild-sidebar-width: 375px;">
     <div class="container">
         <main>
         </main>
 
-        <footer>Press F5 to refresh <br /><br /></footer>
+        <footer style="clear: both;">Press F5 to refresh <br /><br /></footer>
     </div>
+
+    <!-- tags below get pulled from the DOM and used as templates-->
+
+    <article id="printer_template" class="embedFull__623de embed__623de markup__75297" aria-hidden="false" style="margin: 10px; float: left; ">
+        <div class="gridContainer__623de">
+            <div class="grid__623de">
+                <div class="embedTitle__623de embedMargin__623de">
+                    <span class="title">Printer Status</span>
+                </div>
+                <div class="embedDescription__623de embedMargin__623de">
+                    <span class="description">Print task finished at </span>
+                </div>
+                <div class="embedFields__623de">
+                    <div class="embedField__623de" style="grid-column: 1 / 7;">
+                        <div class="embedFieldName__623de">
+                            <span>Status</span>
+                        </div>
+                        <div class="embedFieldValue__623de">
+                            <span class="status">Completed</span>
+                        </div>
+                    </div>
+                    <div class="embedField__623de" style="grid-column: 7 / 13;">
+                        <div class="embedFieldName__623de">
+                            <span>Estimated Time</span>
+                        </div>
+                        <div class="embedFieldValue__623de">
+                            <span class="esttime">N/A</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="accesscode embedDescription__623de embedMargin__623de">
+                </div>
+            </div>
+        </div>
+    </article>
 </body>
 
 </html>

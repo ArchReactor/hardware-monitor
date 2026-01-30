@@ -36,8 +36,9 @@ app.get('/status', (req, res) => {
             name: device.name,
             status: device.status,
             remainingTimeFormatted: device.remainingTimeFormatted,
-			print_progress: device.print_progress,
+			printProgress: device.printProgress,
 			accessToken: device.bambu?.getAccessCode() || "",
+			finishedAt: device.finishedAt,
         };
     });
     res.json({ printers: printersStatus });

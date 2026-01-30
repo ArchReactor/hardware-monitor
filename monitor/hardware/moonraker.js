@@ -16,9 +16,9 @@ export class HardwareMoonraker extends Printer {
             let stateUpdated = false;
             const oldStatus = this.status;
             if("display_status" in data.objectNotification) {
-                if(this.print_progress !== data.objectNotification.display_status.progress) {
+                if(this.printProgress !== data.objectNotification.display_status.progress) {
                     stateUpdated = true;
-                    this.print_progress = data.objectNotification.display_status.progress;
+                    this.printProgress = data.objectNotification.display_status.progress;
                     setTimeRemaining({printer: this});
                 }
 
@@ -32,7 +32,10 @@ export class HardwareMoonraker extends Printer {
                     if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
                         this.remainingTimeInSeconds = 0;
                         this.remainingTimeFormatted = "N/A";
-                        this.print_progress = 100;
+                        this.printProgress = 100;
+                        this.finishedAt = new Date().toLocaleString();
+                    } else {
+                        this.finishedAt = "";
                     }
                 }
                 //console.log(`${this.name} status has changed to ${this.status}!`, data);
@@ -50,11 +53,11 @@ export class HardwareMoonraker extends Printer {
 };
 
 function setTimeRemaining({printer}) {
-    if(printer.print_duration && printer.print_progress) {
-        printer.remainingTimeInSeconds = Math.max(0, ((printer.print_duration / printer.print_progress) - printer.print_duration));
+    if(printer.print_duration && printer.printProgress) {
+        printer.remainingTimeInSeconds = Math.max(0, ((printer.print_duration / printer.printProgress) - printer.print_duration));
         printer.remainingTimeFormatted = formatTimeSeconds(printer.remainingTimeInSeconds);
         console.log(`${printer.name} Remaining time: ${printer.remainingTimeFormatted}`, {
-            print_progress: printer.print_progress,
+            printProgress: printer.printProgress,
             print_duration: printer.print_duration,
             remainingTimeInSeconds: printer.remainingTimeInSeconds
         });
