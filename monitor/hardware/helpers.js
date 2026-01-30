@@ -35,7 +35,7 @@ export async function updateStatus(printer, bot) {
         if(printer.status === "Printing") { //don't create unless printing
             printer.embed = await channel.send({embeds: [{ 
                 title: `Printer Status ${printer.name}`, 
-                description: 'Active print task',
+                description: 'Active print task' + (printer.currentFile ? `: ${printer.currentFile}` : ''),
                 fields: [
                     { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
                     { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },

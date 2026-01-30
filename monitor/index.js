@@ -39,6 +39,7 @@ app.get('/status', (req, res) => {
 			printProgress: device.printProgress,
 			accessToken: device.bambu?.getAccessCode() || "",
 			finishedAt: device.finishedAt,
+			currentFile: device.currentFile,
         };
     });
     res.json({ printers: printersStatus });
@@ -144,7 +145,7 @@ Object.entries(config.printers).forEach(([key, printerConfig]) => {
 	if('serialNumber' in printerConfig) { //bambu
 		const printer = new HardwareBambu(printerConfig);
 		printer.on("statusUpdate", (payload) => {
-			console.log(`Printer ${printer.name} status updated:`, payload);
+			//console.log(`Printer ${printer.name} status updated:`, payload);
 			updateStatus(printer, bot);
 		});
 		printer.on("error", (error) => {

@@ -11,6 +11,7 @@ export class Printer extends EventEmitter {
         this.remainingTimeInSeconds = 0;
         this.remainingTimeFormatted = "N/A";
         this.printerConfig = printerConfig;
+        this.currentFile = "";
     }
 
     //expected events:

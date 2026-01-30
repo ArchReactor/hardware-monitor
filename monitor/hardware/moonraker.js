@@ -10,7 +10,7 @@ export class HardwareMoonraker extends Printer {
             moonrakerUrl: printerConfig.url,
         });
 
-        this.moonraker.subscribeToPrinterObjectStatusWithListener({"display_status": ["progress"], print_stats: ["state", "print_duration"]}, (data) => {
+        this.moonraker.subscribeToPrinterObjectStatusWithListener({"display_status": ["progress"], print_stats: ["filename", "state", "print_duration"]}, (data) => {
             //standby, printing, paused, complete, error, cancelled
             
             let stateUpdated = false;
@@ -25,7 +25,8 @@ export class HardwareMoonraker extends Printer {
             }
             if("print_stats" in data.objectNotification){
                 this.print_duration = data.objectNotification.print_stats.print_duration;
-                var newstatus = normaliseStatus(data.objectNotification.display_status.state);
+                this.currentFile = data.objectNotification.print_stats.filename;
+                var newstatus = normaliseStatus(data.objectNotification.print_stats.state);
                 if(this.status !== newstatus) {
                     stateUpdated = true;
                     this.status = newstatus;
@@ -34,6 +35,7 @@ export class HardwareMoonraker extends Printer {
                         this.remainingTimeFormatted = "N/A";
                         this.printProgress = 100;
                         this.finishedAt = new Date().toLocaleString();
+                        this.currentFile = "";
                     } else {
                         this.finishedAt = "";
                     }

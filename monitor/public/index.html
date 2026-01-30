@@ -37,7 +37,7 @@
             const printer = data.printers[printerName];
             const div = templ.cloneNode(true);
             ChildInnerText(div, "title", `Printer Status: ${printer.name}`);
-            ChildInnerText(div, "description", printer.status === "Completed" || printer.status === "Error" ? `Print task finished at ${printer.finishedAt}` : printer.status);
+            ChildInnerText(div, "description", (printer.status === "Completed" || printer.status === "Error" ? `Print task finished at ${printer.finishedAt}` : printer.status) + (printer.currentFile ? ` ${printer.currentFile}` : ""));
             ChildInnerText(div, "status", `${printer.status}${printer.status === "Printing" ? ` (${printer.printProgress}%)` : ""}`);
             ChildInnerText(div, "esttime", printer.remainingTimeFormatted);
             if (printer.accessToken) {

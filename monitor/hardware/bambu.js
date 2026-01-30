@@ -50,6 +50,7 @@ export class HardwareBambu extends Printer {
                             this.remainingTimeFormatted = "N/A";
                             this.printProgress = 100;
                             this.finishedAt = new Date().toLocaleString();
+                            this.currentFile = "";
                         } else {
                             this.finishedAt = "";
                         }
@@ -67,6 +68,12 @@ export class HardwareBambu extends Printer {
                     if(this.printProgress !== state.print.mc_percent){
                         stateUpdated = true;
                         this.printProgress = state.print.mc_percent;
+                    }
+                }
+                if(state.print.gcode_file){
+                    if(this.currentFile !== state.print.gcode_file) {
+                        this.currentFile = state.print.gcode_file;
+                        stateUpdated = true;
                     }
                 }
             }
