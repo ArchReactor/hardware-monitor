@@ -4,7 +4,8 @@ services:
         #restart: always
         image: node:20
         user: node
-        command: bash -c "npm install && npm update && npm start"
+        #command: bash -c "npm install && npm update && npm start"
+        command: bash -c "npm start"
         environment:
             NODE_ENV: production
             TZ: America/Chicago
