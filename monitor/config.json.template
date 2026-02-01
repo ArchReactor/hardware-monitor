@@ -7,7 +7,7 @@
 	"printers": {
 		"name": {
 			"name": "Bambu Fiendly name",
-			"model": "P1S",
+			"model": "P1S|H2D",
 			"host": "ip address here",
 			"accessToken": "access token here",
 			"serialNumber": "serial number here"
