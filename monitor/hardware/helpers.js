@@ -24,6 +24,7 @@ export async function updateStatus(printer, bot) {
     if(!printer.embed) {
         const messages = await channel.messages.fetch({ limit: 100 });
         printer.embed = messages.filter(msg => 
+            msg.createdTimestamp > Date.now() - (2 * 24 * 60 * 60 * 1000) && //only check last 2 days
             msg.author.username === bot.user.username && 
             msg.embeds.length > 0 && 
             msg.embeds[0].title.includes(printer.name) &&

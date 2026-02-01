@@ -73,6 +73,27 @@ const bot = new Client({ intents: [GatewayIntentBits.Guilds] });
 // It makes some properties non-nullable.
 bot.once(Events.ClientReady, readyClient => {
 	console.log(`Ready! Logged in as ${readyClient.user.tag}`);
+
+	Object.entries(config.printers).forEach(([key, printerConfig]) => {
+		let printer;
+		if('serialNumber' in printerConfig) { //bambu
+			printer = new HardwareBambu(printerConfig);
+		} else if('url' in printerConfig) { //moonraker
+			printer = new HardwareMoonraker(printerConfig);
+		}
+		printer.on("statusUpdate", (payload) => {
+			//console.log(`Printer ${printer.name} status updated:`, payload);
+			updateStatus(printer, bot);
+		});
+		printer.on("error", (error) => {
+			if(error.message.includes("EHOSTUNREACH")) {
+				console.warn(`Printer ${printer.name} is unreachable. Retrying...`);
+			} else {
+				console.error(`Printer ${printer.name} error:`, error);
+			}
+		});
+		bot.devices.set(printer.name, printer);
+	});
 });
 
 // Log in to Discord with your client's token
@@ -141,28 +162,5 @@ bot.on(Events.InteractionCreate, async interaction => {
 	}
 });
 
-Object.entries(config.printers).forEach(([key, printerConfig]) => {
-	if('serialNumber' in printerConfig) { //bambu
-		const printer = new HardwareBambu(printerConfig);
-		printer.on("statusUpdate", (payload) => {
-			//console.log(`Printer ${printer.name} status updated:`, payload);
-			updateStatus(printer, bot);
-		});
-		printer.on("error", (error) => {
-			if(error.message.includes("EHOSTUNREACH")) {
-				console.warn(`Printer ${printer.name} is unreachable. Retrying in 30s`);
-			} else {
-				console.error(`Printer ${printer.name} error:`, error);
-			}
-		});
-		bot.devices.set(printer.name, printer);
-	} else if('url' in printerConfig) { //moonraker
-		const printer = new HardwareMoonraker(printerConfig);
-		printer.on("statusUpdate", (payload) => {
-			console.log(`Printer ${printer.name} status updated:`, payload);
-			updateStatus(printer, bot);
-		});
-		bot.devices.set(printer.name, printer);
-	}
-});
+
 

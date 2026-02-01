@@ -10,23 +10,23 @@ export class HardwareBambu extends Printer {
             host: printerConfig.host,
             accessCode: printerConfig.accessToken,
             serial: printerConfig.serialNumber,
-            options: { autoReconnect: true, reconnectDelay: 30000  },
+            options: { autoReconnect: true, reconnectDelay: 60000  },
         });
 
         // Connection events
         this.bambu.on("connect", () => {
-            console.log("Printer connected");
+            //console.log("Printer connected");
             this.connected = true;
             this.bambu.sendCommand(P1SCommands.pushAllCommand());
         });
 
         this.bambu.on("disconnect", () => {
-            console.log("Printer disconnected");
+            console.log("Printer disconnected", this.name);
             this.connected = false;
         });
 
         this.bambu.on("end", () => {
-            console.log("Connection ended");
+            console.log("Connection ended", this.name);
             this.connected = false;
         });
 
@@ -57,11 +57,11 @@ export class HardwareBambu extends Printer {
                     }
                 }
                 if(state.print.mc_remaining_time){
-                    if(this.remainingTimeInSeconds !== state.print.mc_remaining_time){
+                    if(this.remainingTimeInSeconds !== state.print.mc_remaining_time * 60){
                         stateUpdated = true;
                         this.remainingTimeInSeconds = state.print.mc_remaining_time * 60; //minutes to seconds
                         this.remainingTimeFormatted = formatTimeSeconds(this.remainingTimeInSeconds);
-                        console.log(`Remaining time: ${this.remainingTimeFormatted}`);
+                        //console.log(`Remaining time: ${this.name} ${this.remainingTimeFormatted}`);
                     }
                 }
                 if(state.print.mc_percent){
@@ -90,13 +90,19 @@ export class HardwareBambu extends Printer {
 
         // Error handling
         this.bambu.on("error", (error) => {
+            if(error.message.includes("EHOSTUNREACH")) {
+                this.status = "OFFLINE";
+            }
+            if(error.message.includes("connack timeout") && error.stack.includes("mqtt")) {
+                return; //ignore mqtt connection timeouts, for some reason they don't get swollowed in the try catch
+            }
             this.emit("error", error);
         });
 
         this.bambu.connect().then(() => {
             console.log(`Connected to Bambu printer ${this.name}`);
         }).catch((error) => {
-            console.error(`Failed to connect to Bambu printer ${this.name}:`, error);
+            console.error(`Failed initial connection to Bambu printer ${this.name}:`, error);
         });
     }
 
