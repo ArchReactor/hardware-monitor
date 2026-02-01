@@ -37,7 +37,11 @@ Note: this repo contains Docker config, it is optional to use docker.
    ```sh
    npm start
    ```
-
+8. Register the Discord commands
+   ```sh
+   ./cli.sh
+   node deploy-commands.js
+   ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
