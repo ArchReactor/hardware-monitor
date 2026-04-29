@@ -1,3 +1,4 @@
+import config from '../config.json' with { type: "json" };
 import { Printer } from "./printerBase.js";
 import { PrinterController, P1SCommands } from 'bambu-js';
 import { formatTimeSeconds } from "./helpers.js";
@@ -110,9 +111,58 @@ export class HardwareBambu extends Printer {
     async updateToken(accessToken) {        
         await this.bambu.disconnect();
         this.bambu.setAccessCode(accessToken);
-        await this.bambu.connect();
+        this.bambu.connect().then(async () => {
+            console.log(`reconfiguring HASS for ${this.name} with new token`);
+            try {
+                const step1 = await hassflowData("", {
+                    handler:this.printerConfig.hassHandlerId,
+                    show_advanced_options:false
+                });
+                const flowID = step1.flow_id;
+                const oldSettings = await hassflowData(flowID, {printer_mode:"lan"});
+                await hassflowData(flowID, {
+                    host:this.printerConfig.host,
+                    access_code:accessToken,
+                    print_cache_count:oldSettings.data_schema.find(x => x.name === "print_cache_count")?.default || "10",
+                    timelapse_cache_count:oldSettings.data_schema.find(x => x.name === "timelapse_cache_count")?.default || "1",
+                    usage_hours:oldSettings.data_schema.find(x => x.name === "usage_hours")?.default || "0",
+                    advanced:{
+                        disable_ssl_verify:false,
+                        enable_firmware_update:false
+                    }
+                });
+                console.log(`Successfully reconfigured HASS for ${this.name} with new token`);
+            } catch (error) {
+                console.error(`Failed to start HASS reconfiguration flow for ${this.name} with new token:`, error);
+                throw new Error(`Failed to start HASS reconfiguration flow for ${this.name} with new token: ${error.message}`);
+            }
+        }).catch((error) => {
+            this.emit("error", `Failed to reconnect to Bambu printer ${this.name} with new token: ${error.message}`);
+            console.error(`Failed to reconnect to Bambu printer ${this.name} with new token:`, error);
+        });
+
+
     }
 };
+
+async function hassflowData(flowID, payload){
+    return await fetch(`${config.hassUri}/api/config/config_entries/options/flow` + (flowID ? `/${flowID}` : ""),{
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${config.hassToken}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+    }).then(response => {
+        if(!response.ok){
+            throw new Error(`HASS responded with status ${response.status} when trying to reconfigure ${this.name}`);
+        }
+        return response.json();
+    }).catch(error => {
+        console.error(`Failed to reconfigure HASS for ${this.name} with new token:`, error);
+        throw new Error(`Failed to reconfigure HASS for ${this.name} with new token: ${error.message}`);
+    });
+}
 
 function normaliseStatus(status) {
     switch (status) {
