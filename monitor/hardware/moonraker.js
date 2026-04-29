@@ -47,9 +47,9 @@ export class HardwareMoonraker extends Printer {
                         this.currentFile = response.data.result.status.print_stats.filename;
                     }
                 }
-                if(this.printProgress !== response.data.result.status.display_status.progress) {
+                if(this.printProgress !== response.data.result.status.display_status.progress * 100.0) {
                     stateUpdated = true;
-                    this.printProgress = response.data.result.status.display_status.progress;
+                    this.printProgress = response.data.result.status.display_status.progress * 100.0;
                     setTimeRemaining({printer: this});
                 }
                 if(stateUpdated) {

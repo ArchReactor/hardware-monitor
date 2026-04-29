@@ -24,15 +24,15 @@ export async function updateStatus(printer, bot) {
     if(!printer.embed) {
         const messages = await channel.messages.fetch({ limit: 100 });
         printer.embed = messages.filter(msg => 
-            msg.createdTimestamp > Date.now() - (2 * 24 * 60 * 60 * 1000) && //only check last 2 days
+            msg.createdTimestamp > Date.now() - (1 * 24 * 60 * 60 * 1000) && //only check last 1 days
             msg.author.username === bot.user.username && 
             msg.embeds.length > 0 && 
             msg.embeds[0].title.includes(printer.name) &&
-            msg.embeds[0].fields.some(field => field.name === "Status" && field.value !== "Completed" && field.value !== "Error") //only grab if last status isn't completed
+            msg.embeds[0].description.indexOf('Active print task') !== -1 //only grab if still in printing
         ).first();
     }
     //then add or update embed, if currently completed make a new one
-    if(!printer.embed || (printer.embed.embeds[0].fields.some(field => field.name === "Status" && (field.value === "Completed" || field.value === "Error")))) {
+    if(!printer.embed) {
         if(printer.status === "Printing") { //don't create unless printing
             printer.embed = await channel.send({embeds: [{ 
                 title: `Printer Status ${printer.name}`, 
@@ -43,7 +43,7 @@ export async function updateStatus(printer, bot) {
                 ]
             }]}); 
         }
-    } else {
+    } else { //do an edit
         const newEmb = EmbedBuilder.from(printer.embed.embeds[0]);
         newEmb.setFields([
             { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
