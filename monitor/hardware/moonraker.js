@@ -1,7 +1,6 @@
 import { Printer } from "./printerBase.js";
 import { MoonrakerClient } from "moonraker-client";
-import { formatTimeSeconds, updateStatus } from "./helpers.js";
-import { stat } from "fs";
+import { formatTimeSeconds } from "./helpers.js";
 
 export class HardwareMoonraker extends Printer {
 
@@ -33,9 +32,10 @@ export class HardwareMoonraker extends Printer {
                 const oldStatus = this.status;
 
                 this.status = normaliseStatus(response.data.result.status.print_stats.state);
+                this.print_duration = response.data.result.status.print_stats.print_duration;
                 if(oldStatus !== this.status) {
                     stateUpdated = true;
-                    if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
+                    if(oldStatus === "Printing" && (this.status === "Error" || this.status === "Cancelled" || this.status === "Completed" || this.status === "Idle")) {
                         this.remainingTimeInSeconds = 0;
                         this.remainingTimeFormatted = "N/A";
                         this.printProgress = 100;
@@ -43,13 +43,13 @@ export class HardwareMoonraker extends Printer {
                         this.currentFile = "";
                     } else {
                         this.finishedAt = "";
-                        this.print_duration = response.data.result.status.print_stats.print_duration;
                         this.currentFile = response.data.result.status.print_stats.filename;
                     }
                 }
-                if(this.printProgress !== response.data.result.status.display_status.progress * 100.0) {
+                const progress = Math.round(response.data.result.status.display_status.progress * 100);
+                if(this.printProgress !== progress) {
                     stateUpdated = true;
-                    this.printProgress = response.data.result.status.display_status.progress * 100.0;
+                    this.printProgress = progress;
                     setTimeRemaining({printer: this});
                 }
                 if(stateUpdated) {
@@ -132,7 +132,8 @@ export class HardwareMoonraker extends Printer {
 
 function setTimeRemaining({printer}) {
     if(printer.print_duration && printer.printProgress) {
-        printer.remainingTimeInSeconds = Math.max(0, ((printer.print_duration / printer.printProgress) - printer.print_duration));
+        const totalSeconds = printer.print_duration / (printer.printProgress / 100); //printProgress is a percentage
+        printer.remainingTimeInSeconds = Math.round(Math.max(0, totalSeconds - printer.print_duration));
         printer.remainingTimeFormatted = formatTimeSeconds(printer.remainingTimeInSeconds);
         console.log(`${printer.name} Remaining time: ${printer.remainingTimeFormatted}`, {
             printProgress: printer.printProgress,

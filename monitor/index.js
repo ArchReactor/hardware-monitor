@@ -66,7 +66,7 @@ app.post('/update-token', async (req, res) => {
 });
 
 // Create a new client instance
-const bot = new Client({ intents: [GatewayIntentBits.Guilds] });
+const bot = new Client({ intents: [GatewayIntentBits.Guilds, GatewayIntentBits.GuildMessages] });
 
 // When the client is ready, run this code (only once).
 // The distinction between `client: Client<boolean>` and `readyClient: Client<true>` is important for TypeScript developers.
@@ -83,7 +83,9 @@ bot.once(Events.ClientReady, readyClient => {
 		}
 		printer.on("statusUpdate", (payload) => {
 			//console.log(`Printer ${printer.name} status updated:`, payload);
-			updateStatus(printer, bot);
+			printer.pending = (printer.pending || Promise.resolve())
+				.then(() => updateStatus(printer, bot))
+				.catch(error => console.error(`Failed to update Discord for ${printer.name}:`, error));
 		});
 		printer.on("error", (error) => {
 			if(error.message.includes("EHOSTUNREACH")) {
@@ -120,6 +122,11 @@ for (const folder of commandFolders) {
 		}
 	}
 }
+
+bot.on(Events.MessageCreate, message => {
+	if(message.channelId !== config.channelId || message.author.id === bot.user.id) return;
+	bot.devices.forEach(printer => printer.messagesSince++);
+});
 
 bot.on(Events.InteractionCreate, async interaction => {
 	if (interaction.isChatInputCommand()) {

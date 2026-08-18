@@ -46,7 +46,7 @@ export class HardwareBambu extends Printer {
                     this.status = normaliseStatus(state.print.gcode_state);
                     if(this.status !== oldStatus){
                         stateUpdated = true;
-                        if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
+                        if(oldStatus === "Printing" && (this.status === "Error" || this.status === "Completed" || this.status === "Idle")) {
                             this.remainingTimeInSeconds = 0;
                             this.remainingTimeFormatted = "N/A";
                             this.printProgress = 100;
@@ -57,7 +57,7 @@ export class HardwareBambu extends Printer {
                         }
                     }
                 }
-                if(state.print.mc_remaining_time){
+                if(state.print.mc_remaining_time !== undefined){
                     if(this.remainingTimeInSeconds !== state.print.mc_remaining_time * 60){
                         stateUpdated = true;
                         this.remainingTimeInSeconds = state.print.mc_remaining_time * 60; //minutes to seconds
@@ -65,7 +65,7 @@ export class HardwareBambu extends Printer {
                         //console.log(`Remaining time: ${this.name} ${this.remainingTimeFormatted}`);
                     }
                 }
-                if(state.print.mc_percent){
+                if(state.print.mc_percent !== undefined){
                     if(this.printProgress !== state.print.mc_percent){
                         stateUpdated = true;
                         this.printProgress = state.print.mc_percent;
