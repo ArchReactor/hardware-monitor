@@ -1,7 +1,17 @@
-import { EmbedBuilder } from "discord.js";
+import { EmbedBuilder, AttachmentBuilder } from "discord.js";
 
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const REPOST_AFTER = 4; //other messages before the card gets moved back to the bottom
+const ACTIVE_TASK = 'Active print task'; //card description while the print is running
+
+function photoFile(printer) {
+    return printer.photo ? [new AttachmentBuilder(printer.photo, { name: 'snapshot.jpg' })] : [];
+}
+
+function getChannel(bot) {
+    const guild = bot.guilds.cache.get(bot.globalConfig.guildId);
+    return guild?.channels.cache.get(bot.globalConfig.channelId);
+}
 
 export function formatTimeSeconds(seconds) {
     if (seconds === 0) return "N/A";
@@ -11,7 +21,7 @@ export function formatTimeSeconds(seconds) {
     return `${hrs}h ${mins}m ${secs}s`;
 }
 
-export async function updateStatus(printer, bot) {
+export async function updateStatus(printer, bot, oldStatus) {
     if(bot.globalConfig.disableDiscord) {
         console.log(`[INFO] Discord updates are disabled in config.json`, JSON.stringify({
             name: printer.name,
@@ -21,11 +31,19 @@ export async function updateStatus(printer, bot) {
         }));
         return;
     }; //log only if disabled
-    const guild = bot.guilds.cache.get(bot.globalConfig.guildId);
-    const channel = guild?.channels.cache.get(bot.globalConfig.channelId);
+    const channel = getChannel(bot);
     if(!channel) {
         console.error(`[ERROR] Discord channel ${bot.globalConfig.channelId} not found, skipping update for ${printer.name}`);
         return;
+    }
+    const statusChanged = oldStatus !== printer.status;
+    if(statusChanged) { //progress ticks reuse the last photo, a status change earns a new one
+        try {
+            printer.photo = await printer.getSnapshot();
+        } catch (error) {
+            printer.photo = null;
+            console.error(`[ERROR] No photo from ${printer.name}:`, error.message); //the update is still worth sending
+        }
     }
     //first check for past embeds
     if(!printer.embed) {
@@ -35,7 +53,7 @@ export async function updateStatus(printer, bot) {
             msg.author.username === bot.user.username && 
             msg.embeds.length > 0 && 
             msg.embeds[0].title === `Printer Status ${printer.name}` &&
-            msg.embeds[0].description?.includes('Active print task') //only grab if still in printing
+            msg.embeds[0].description?.includes(ACTIVE_TASK) //only grab if still in printing
         ).first();
     }
     //then add or update embed, if currently completed make a new one
@@ -43,28 +61,38 @@ export async function updateStatus(printer, bot) {
         if(printer.status === "Printing") { //don't create unless printing
             printer.embed = await channel.send({embeds: [{ 
                 title: `Printer Status ${printer.name}`, 
-                description: 'Active print task' + (printer.currentFile ? `: ${printer.currentFile}` : ''),
+                description: ACTIVE_TASK + (printer.currentFile ? `: ${printer.currentFile}` : ''),
+                thumbnail: printer.photo ? { url: 'attachment://snapshot.jpg' } : undefined,
                 fields: [
                     { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
                     { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },
                 ]
-            }]}); 
+            }], files: photoFile(printer)}); 
             printer.messagesSince = 0;
         }
     } else { //do an edit
         const newEmb = EmbedBuilder.from(printer.embed.embeds[0]);
-        newEmb.setFields([
-            { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
-            { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },
-        ]);
         const finished = printer.status === "Completed" || printer.status === "Error" || printer.status === "Cancelled";
+        newEmb.setFields([
+            { name: 'Status', value: finished ? printer.status : `${printer.status} (${printer.printProgress}%)`, inline: true },
+            finished
+                ? { name: 'Time Elapsed', value: printer.elapsedFormatted, inline: true }
+                : { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },
+        ]);
         if(finished) {
-            newEmb.setDescription('Print task finished at ' + printer.finishedAt);
+            const file = newEmb.data.description?.split(`${ACTIVE_TASK}: `)[1] || 'Print task'; //keep the file name on the finished card
+            newEmb.setDescription(`${file} finished at ${printer.finishedAt}`);
         }
-        if(printer.messagesSince >= REPOST_AFTER) { //card has scrolled up, put it back at the bottom
+        const reposting = printer.messagesSince >= REPOST_AFTER || finished; //a finish moves down too, an edit in place is too easy to miss
+        if(statusChanged || reposting) { //both of these upload the photo again, so point the thumbnail at the new copy
+            newEmb.setThumbnail(printer.photo ? 'attachment://snapshot.jpg' : null);
+        }
+        if(reposting) { //card has scrolled up, put it back at the bottom
             await printer.embed.delete().catch(() => {}); //might already be gone
-            printer.embed = await channel.send({ embeds: [newEmb] });
+            printer.embed = await channel.send({ embeds: [newEmb], files: photoFile(printer) });
             printer.messagesSince = 0;
+        } else if(statusChanged) {
+            await printer.embed.edit({ embeds: [newEmb], files: photoFile(printer), attachments: []}); //attachments: [] drops the previous photo
         } else {
             await printer.embed.edit({ embeds: [newEmb]});
         }

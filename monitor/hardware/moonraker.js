@@ -38,6 +38,7 @@ export class HardwareMoonraker extends Printer {
                     if(oldStatus === "Printing" && (this.status === "Error" || this.status === "Cancelled" || this.status === "Completed" || this.status === "Idle")) {
                         this.remainingTimeInSeconds = 0;
                         this.remainingTimeFormatted = "N/A";
+                        this.elapsedFormatted = formatTimeSeconds(Math.round(response.data.result.status.print_stats.total_duration));
                         this.printProgress = 100;
                         this.finishedAt = new Date().toLocaleString();
                         this.currentFile = "";
@@ -64,6 +65,25 @@ export class HardwareMoonraker extends Printer {
         ).catch((error)=> {
             this.emit("error", error);
         }); 
+    }
+
+    async getSnapshot() {
+        if(!this.snapshotUrl) {
+            const response = await this.moonraker.httpRequest({
+                method: 'get',
+                url: '/server/webcams/list',
+            });
+            const webcam = response.data.result.webcams.find(cam => cam.enabled);
+            if(!webcam) {
+                return null; //no camera on this printer
+            }
+            this.snapshotUrl = new URL(webcam.snapshot_url, this.printerConfig.url).href; //moonraker gives it relative to itself
+        }
+        const image = await fetch(this.snapshotUrl);
+        if(!image.ok) {
+            throw new Error(`webcam returned ${image.status}`);
+        }
+        return Buffer.from(await image.arrayBuffer());
     }
 
     // connect() {

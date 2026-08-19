@@ -84,7 +84,7 @@ bot.once(Events.ClientReady, readyClient => {
 		printer.on("statusUpdate", (payload) => {
 			//console.log(`Printer ${printer.name} status updated:`, payload);
 			printer.pending = (printer.pending || Promise.resolve())
-				.then(() => updateStatus(printer, bot))
+				.then(() => updateStatus(printer, bot, payload.oldStatus))
 				.catch(error => console.error(`Failed to update Discord for ${printer.name}:`, error));
 		});
 		printer.on("error", (error) => {

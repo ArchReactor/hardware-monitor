@@ -1,6 +1,6 @@
 import config from '../config.json' with { type: "json" };
 import { Printer } from "./printerBase.js";
-import { PrinterController, P1SCommands } from 'bambu-js';
+import { PrinterController, P1SCommands, CameraController } from 'bambu-js';
 import { formatTimeSeconds } from "./helpers.js";
 
 export class HardwareBambu extends Printer {
@@ -49,11 +49,16 @@ export class HardwareBambu extends Printer {
                         if(oldStatus === "Printing" && (this.status === "Error" || this.status === "Completed" || this.status === "Idle")) {
                             this.remainingTimeInSeconds = 0;
                             this.remainingTimeFormatted = "N/A";
+                            this.elapsedFormatted = this.startedAt ? formatTimeSeconds(Math.round((Date.now() - this.startedAt) / 1000)) : "N/A";
+                            this.startedAt = 0;
                             this.printProgress = 100;
                             this.finishedAt = new Date().toLocaleString();
                             this.currentFile = "";
                         } else {
                             this.finishedAt = "";
+                            if(this.status === "Printing" && !this.startedAt) {
+                                this.startedAt = Date.now(); //a pause and resume keeps the original start
+                            }
                         }
                     }
                 }
@@ -111,6 +116,7 @@ export class HardwareBambu extends Printer {
     async updateToken(accessToken) {        
         await this.bambu.disconnect();
         this.bambu.setAccessCode(accessToken);
+        this.camera = null; //rebuilt on the next photo with the new code
         this.bambu.connect().then(async () => {
             console.log(`reconfiguring HASS for ${this.name} with new token`);
             try {
@@ -142,6 +148,18 @@ export class HardwareBambu extends Printer {
         });
 
 
+    }
+
+    async getSnapshot() {
+        if(!this.camera) {
+            this.camera = CameraController.create({
+                model: this.printerConfig.model,
+                host: this.printerConfig.host,
+                accessCode: this.bambu.getAccessCode(),
+            });
+        }
+        const frame = await this.camera.captureFrame();
+        return frame.imageData;
     }
 };
 
