@@ -32,7 +32,7 @@ export async function updateStatus(printer, bot) {
         ).first();
     }
     //then add or update embed, if currently completed make a new one
-    if(!printer.embed || printer.embed.createdTimestamp > Date.now() - (1 * 24 * 60 * 60 * 1000)) { //create new embed if not found or older than 1 day
+    if(!printer.embed || printer.embed.createdTimestamp < (Date.now() - (1 * 24 * 60 * 60 * 1000))) { //create new embed if not found or older than 1 day
         if(printer.status === "Printing") { //don't create unless printing
             printer.embed = await channel.send({embeds: [{ 
                 title: `Printer Status ${printer.name}`, 
@@ -51,6 +51,8 @@ export async function updateStatus(printer, bot) {
         ]);
         if(printer.status === "Completed" || printer.status === "Error") {
             newEmb.setDescription('Print task finished at ' + printer.finishedAt);
+        } else {
+            newEmb.setDescription('Active print task' + (printer.currentFile ? `: ${printer.currentFile}` : ''));
         }
         printer.embed.edit({ embeds: [newEmb]});
         console.log(`[INFO] Updated Discord embed for printer ${printer.name}`, JSON.stringify({
