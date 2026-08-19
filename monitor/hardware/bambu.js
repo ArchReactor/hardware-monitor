@@ -1,6 +1,6 @@
 import config from '../config.json' with { type: "json" };
 import { Printer } from "./printerBase.js";
-import { PrinterController, P1SCommands } from 'bambu-js';
+import { PrinterController, P1SCommands, CameraController } from 'bambu-js';
 import { formatTimeSeconds } from "./helpers.js";
 
 export class HardwareBambu extends Printer {
@@ -46,18 +46,23 @@ export class HardwareBambu extends Printer {
                     this.status = normaliseStatus(state.print.gcode_state);
                     if(this.status !== oldStatus){
                         stateUpdated = true;
-                        if(oldStatus === "Printing" && (this.status === "Failed" || this.status === "Completed" || this.status === "Idle")) {
+                        if(oldStatus === "Printing" && (this.status === "Error" || this.status === "Completed" || this.status === "Idle")) {
                             this.remainingTimeInSeconds = 0;
                             this.remainingTimeFormatted = "N/A";
+                            this.elapsedFormatted = this.startedAt ? formatTimeSeconds(Math.round((Date.now() - this.startedAt) / 1000)) : "N/A";
+                            this.startedAt = 0;
                             this.printProgress = 100;
                             this.finishedAt = new Date().toLocaleString();
                             this.currentFile = "";
                         } else {
                             this.finishedAt = "";
+                            if(this.status === "Printing" && !this.startedAt) {
+                                this.startedAt = Date.now(); //a pause and resume keeps the original start
+                            }
                         }
                     }
                 }
-                if(state.print.mc_remaining_time){
+                if(state.print.mc_remaining_time !== undefined){
                     if(this.remainingTimeInSeconds !== state.print.mc_remaining_time * 60){
                         stateUpdated = true;
                         this.remainingTimeInSeconds = state.print.mc_remaining_time * 60; //minutes to seconds
@@ -65,7 +70,7 @@ export class HardwareBambu extends Printer {
                         //console.log(`Remaining time: ${this.name} ${this.remainingTimeFormatted}`);
                     }
                 }
-                if(state.print.mc_percent){
+                if(state.print.mc_percent !== undefined){
                     if(this.printProgress !== state.print.mc_percent){
                         stateUpdated = true;
                         this.printProgress = state.print.mc_percent;
@@ -111,6 +116,7 @@ export class HardwareBambu extends Printer {
     async updateToken(accessToken) {        
         await this.bambu.disconnect();
         this.bambu.setAccessCode(accessToken);
+        this.camera = null; //rebuilt on the next photo with the new code
         this.bambu.connect().then(async () => {
             console.log(`reconfiguring HASS for ${this.name} with new token`);
             try {
@@ -142,6 +148,18 @@ export class HardwareBambu extends Printer {
         });
 
 
+    }
+
+    async getSnapshot() {
+        if(!this.camera) {
+            this.camera = CameraController.create({
+                model: this.printerConfig.model,
+                host: this.printerConfig.host,
+                accessCode: this.bambu.getAccessCode(),
+            });
+        }
+        const frame = await this.camera.captureFrame();
+        return frame.imageData;
     }
 };
 
