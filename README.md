@@ -31,7 +31,7 @@ Note: this repo contains Docker config, it is optional to use docker.
 4. Copy `config.json.template` to `config.json` Enter your discord bot info
    See the following URL for how to create a bot and get the values neded
    * https://discordjs.guide/preparations/setting-up-a-bot-application.html
-5. Add your printer information to `config.json`
+5. Add your printer information to `config.json`.  The optional `rotateSnapshot` parameter is degrees clockwise to rotate.
 6. If using docker, run ```docker compose up``` to follow the console or ```docker compose up -d``` to background it
 7. If not using Docker, ```cd monitor``` and run the service
    ```sh
