@@ -52,8 +52,8 @@ export async function updateStatus(printer, bot, oldStatus) {
             msg.createdTimestamp >= Date.now() - ONE_DAY && //only check last 1 days
             msg.author.username === bot.user.username && 
             msg.embeds.length > 0 && 
-            msg.embeds[0].title === `Printer Status ${printer.name}` &&
-            msg.embeds[0].description?.includes(ACTIVE_TASK) //only grab if still in printing
+            msg.embeds[0].title === `Printer Status ${printer.name}`// &&
+            //msg.embeds[0].description?.includes(ACTIVE_TASK) //only grab if still in printing
         ).first();
     }
     //then add or update embed, if currently completed make a new one
