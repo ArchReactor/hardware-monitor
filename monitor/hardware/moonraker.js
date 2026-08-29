@@ -1,6 +1,7 @@
 import { Printer } from "./printerBase.js";
 import { MoonrakerClient } from "moonraker-client";
 import { formatTimeSeconds } from "./helpers.js";
+import { Jimp } from "jimp";
 
 export class HardwareMoonraker extends Printer {
 
@@ -83,7 +84,13 @@ export class HardwareMoonraker extends Printer {
         if(!image.ok) {
             throw new Error(`webcam returned ${image.status}`);
         }
-        return Buffer.from(await image.arrayBuffer());
+        if(this.printerConfig.rotateSnapshot) {
+            const j = await Jimp.read(await image.arrayBuffer());
+            j.rotate(this.printerConfig.rotateSnapshot);
+            return await j.getBufferAsync(Jimp.MIME_JPEG);
+        } else{
+            return Buffer.from(await image.arrayBuffer());
+        }
     }
 
     // connect() {
