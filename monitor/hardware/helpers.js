@@ -3,6 +3,7 @@ import { EmbedBuilder, AttachmentBuilder } from "discord.js";
 const ONE_DAY = 24 * 60 * 60 * 1000;
 const REPOST_AFTER = 4; //other messages before the card gets moved back to the bottom
 const ACTIVE_TASK = 'Active print task'; //card description while the print is running
+const FINISH_PHOTO_FROM = 99; //percent complete, from here each progress tick photographs the print for the finished card, before the end gcode drops the bed out of frame
 
 function photoFile(printer) {
     return printer.photo ? [new AttachmentBuilder(printer.photo, { name: 'snapshot.jpg' })] : [];
@@ -64,6 +65,7 @@ export async function updateStatus(printer, bot, oldStatus) {
             }]});
             printer.messagesSince = 0;
             printer.photo = null; //a new card starts clean, the last print's photo is not ours
+            printer.photoBeforeEnd = false;
         }
     } else { //do an edit
         const newEmb = EmbedBuilder.from(printer.embed.embeds[0]);
@@ -76,9 +78,13 @@ export async function updateStatus(printer, bot, oldStatus) {
             return; //the finish is already on the card, later reports don't change it
         }
         const starting = statusChanged && printer.status === "Printing" && oldStatus !== "Paused"; //a new print, not a resume
+        const nearlyDone = printer.status === "Printing" && printer.printProgress >= FINISH_PHOTO_FROM; //still printing, so the bed is still up
+        const completing = statusChanged && printer.status === "Completed";
         if(starting) {
             printer.photo = null; //the new print takes the card over clean, the last print's photo is not ours
-        } else if(statusChanged) { //progress ticks reuse the last photo, a status change earns a new one
+        } else if(completing && printer.photoBeforeEnd) {
+            //keep the last nearly done photo, by the time Completed is reported the end gcode has dropped the bed and only the tallest prints are in frame
+        } else if(statusChanged || nearlyDone) { //progress ticks reuse the last photo, a status change or a nearly done print earns a new one
             try {
                 printer.photo = await printer.getSnapshot();
             } catch (error) {
@@ -86,6 +92,7 @@ export async function updateStatus(printer, bot, oldStatus) {
                 console.error(`[ERROR] No photo from ${printer.name}:`, error.message); //the update is still worth sending
             }
         }
+        printer.photoBeforeEnd = nearlyDone && printer.photo !== null; //a pause, a failure or an earlier tick means the finish takes its own photo
         newEmb.setFields([
             { name: 'Status', value: finished ? printer.status : `${printer.status} (${printer.printProgress}%)`, inline: true },
             finished
