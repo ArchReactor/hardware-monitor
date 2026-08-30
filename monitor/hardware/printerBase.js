@@ -16,6 +16,7 @@ export class Printer extends EventEmitter {
         this.currentFile = "";
         this.messagesSince = 0;
         this.photo = null;
+        this.photoBeforeEnd = false; //photo was taken while the print was nearly done, so the finish can reuse it
     }
 
     //expected events:
