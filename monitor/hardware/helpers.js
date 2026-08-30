@@ -37,14 +37,6 @@ export async function updateStatus(printer, bot, oldStatus) {
         return;
     }
     const statusChanged = oldStatus !== printer.status;
-    if(statusChanged) { //progress ticks reuse the last photo, a status change earns a new one
-        try {
-            printer.photo = await printer.getSnapshot();
-        } catch (error) {
-            printer.photo = null;
-            console.error(`[ERROR] No photo from ${printer.name}:`, error.message); //the update is still worth sending
-        }
-    }
     //first check for past embeds
     if(!printer.embed) {
         const messages = await channel.messages.fetch({ limit: 100 });
@@ -56,23 +48,44 @@ export async function updateStatus(printer, bot, oldStatus) {
             //msg.embeds[0].description?.includes(ACTIVE_TASK) //only grab if still in printing
         ).first();
     }
-    //then add or update embed, if currently completed make a new one
+    //then add or update embed, one card per printer that each new print takes over
     if(!printer.embed || printer.embed.createdTimestamp < Date.now() - ONE_DAY) { //create new embed if not found or older than 1 day
         if(printer.status === "Printing") { //don't create unless printing
+            if(printer.embed) {
+                await printer.embed.delete().catch(() => {}); //the day old card is replaced, not left sitting there
+            }
             printer.embed = await channel.send({embeds: [{ 
                 title: `Printer Status ${printer.name}`, 
                 description: ACTIVE_TASK + (printer.currentFile ? `: ${printer.currentFile}` : ''),
-                thumbnail: printer.photo ? { url: 'attachment://snapshot.jpg' } : undefined,
                 fields: [
                     { name: 'Status', value: `${printer.status} (${printer.printProgress}%)`, inline: true },
                     { name: 'Estimated Time', value: printer.remainingTimeFormatted, inline: true },
                 ]
-            }], files: photoFile(printer)}); 
+            }]});
             printer.messagesSince = 0;
+            printer.photo = null; //a new card starts clean, the last print's photo is not ours
         }
     } else { //do an edit
         const newEmb = EmbedBuilder.from(printer.embed.embeds[0]);
         const finished = printer.status === "Completed" || printer.status === "Error" || printer.status === "Cancelled";
+        const running = printer.status === "Printing" || printer.status === "Paused";
+        if(!finished && !running) {
+            return; //idle or offline, the card stands as it is until the next print takes it over
+        }
+        if(finished && !newEmb.data.description?.startsWith(ACTIVE_TASK)) {
+            return; //the finish is already on the card, later reports don't change it
+        }
+        const starting = statusChanged && printer.status === "Printing" && oldStatus !== "Paused"; //a new print, not a resume
+        if(starting) {
+            printer.photo = null; //the new print takes the card over clean, the last print's photo is not ours
+        } else if(statusChanged) { //progress ticks reuse the last photo, a status change earns a new one
+            try {
+                printer.photo = await printer.getSnapshot();
+            } catch (error) {
+                printer.photo = null;
+                console.error(`[ERROR] No photo from ${printer.name}:`, error.message); //the update is still worth sending
+            }
+        }
         newEmb.setFields([
             { name: 'Status', value: finished ? printer.status : `${printer.status} (${printer.printProgress}%)`, inline: true },
             finished
@@ -82,10 +95,14 @@ export async function updateStatus(printer, bot, oldStatus) {
         if(finished) {
             const file = newEmb.data.description?.split(`${ACTIVE_TASK}: `)[1] || 'Print task'; //keep the file name on the finished card
             newEmb.setDescription(`${file} finished at ${printer.finishedAt}`);
+        } else {
+            newEmb.setDescription(ACTIVE_TASK + (printer.currentFile ? `: ${printer.currentFile}` : '')); //the file name can arrive after the card
         }
         const reposting = printer.messagesSince >= REPOST_AFTER || finished; //a finish moves down too, an edit in place is too easy to miss
         if(statusChanged || reposting) { //both of these upload the photo again, so point the thumbnail at the new copy
             newEmb.setThumbnail(printer.photo ? 'attachment://snapshot.jpg' : null);
+        } else if(newEmb.data.thumbnail) {
+            newEmb.setThumbnail('attachment://snapshot.jpg'); //a cdn url here unhooks the photo and discord posts it full size
         }
         if(reposting) { //card has scrolled up, put it back at the bottom
             await printer.embed.delete().catch(() => {}); //might already be gone
@@ -100,9 +117,6 @@ export async function updateStatus(printer, bot, oldStatus) {
             name: printer.name,
             editedTimestamp: printer.embed.editedTimestamp,
         }));
-        if(finished) {
-            printer.embed = null; //let the next print start its own card
-        }
     }
 
 }
